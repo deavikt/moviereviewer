@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">moviereviewer</string>
+
+    <string name="popular_movie_list_title">Популярные</string>
+
+    <string name="movie_poster_description">film poster</string>
+    <string name="favourite_movie_icon_description">favourite film icon</string>
 </resources>
