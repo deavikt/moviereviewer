@@ -2,6 +2,7 @@ package ru.tinkoff.moviereviewer
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import androidx.fragment.app.FragmentActivity
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.bitmap.RoundedCorners
@@ -22,11 +23,13 @@ class PopularMovieListAdapter(private val movieList: MovieList):
     override fun getItemCount(): Int = movieList.items.size
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val popularFilm = movieList.items[position]
+        val popularMovie = movieList.items[position]
 
-        holder.binding.filmName.text = popularFilm.nameRu
-        holder.binding.filmGenreYear.text = getGenreYearLine(popularFilm)
-        loadMoviePoster(holder, popularFilm)
+        holder.binding.movieName.text = popularMovie.nameRu
+        holder.binding.movieGenreYear.text = getGenreYearLine(popularMovie)
+        loadMoviePoster(holder, popularMovie)
+
+        holder.itemView.setOnClickListener { addMovieDescriptionFragment(holder, position) }
     }
 
     // создание строки с жанром и годом выпуска фильма
@@ -49,6 +52,18 @@ class PopularMovieListAdapter(private val movieList: MovieList):
             .placeholder(R.drawable.movie_poster_placeholder)
             .error(R.drawable.movie_poster_error)
             .apply(RequestOptions.bitmapTransform(RoundedCorners(5))) // закругление краев постера
-            .into(holder.binding.filmPosterSmall)
+            .into(holder.binding.smallMoviePoster)
+    }
+
+    // замена фрагмента со списком популярных фильмов
+    // на фрагмент с описанием выбранного фильма
+    private fun addMovieDescriptionFragment(holder: ViewHolder, position: Int) {
+        val popularMovie = movieList.items[position]
+
+        (holder.itemView.context as FragmentActivity).supportFragmentManager
+            .beginTransaction()
+            .replace(R.id.fragment_container, MovieDescriptionFragment(popularMovie.kinopoiskId))
+            .addToBackStack("MovieDescriptionFragment")
+            .commit()
     }
 }

@@ -3,6 +3,7 @@
 
     <string name="popular_movie_list_title">Популярные</string>
 
-    <string name="movie_poster_description">film poster</string>
-    <string name="favourite_movie_icon_description">favourite film icon</string>
+    <string name="movie_poster_description">movie poster</string>
+    <string name="favourite_movie_icon_description">favourite movie icon</string>
+    <string name="back_arrow_icon_description">back arrow icon</string>
 </resources>

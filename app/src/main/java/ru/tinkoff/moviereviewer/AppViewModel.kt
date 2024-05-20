@@ -20,4 +20,14 @@ class AppViewModel: ViewModel() {
 
         return liveDataFilmList
     }
+
+    fun getMovieDescriptionById(kinopoiskId: Int): MutableLiveData<MovieById> {
+        val liveDataFilmById: MutableLiveData<MovieById> = MutableLiveData()
+
+        CoroutineScope(Dispatchers.Main).launch {
+            liveDataFilmById.value = popularMovieAPI.getMovieById(kinopoiskId)
+        }
+
+        return liveDataFilmById
+    }
 }

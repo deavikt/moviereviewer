@@ -16,7 +16,7 @@
         android:padding="15dp">
 
         <ImageView
-            android:id="@+id/film_poster_small"
+            android:id="@+id/small_movie_poster"
             android:layout_width="40dp"
             android:layout_height="63dp"
             app:layout_constraintStart_toStartOf="parent"
@@ -24,12 +24,12 @@
             android:contentDescription="@string/movie_poster_description" />
 
         <TextView
-            android:id="@+id/film_name"
+            android:id="@+id/movie_name"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
             android:layout_marginStart="15dp"
-            app:layout_constraintStart_toEndOf="@+id/film_poster_small"
+            app:layout_constraintStart_toEndOf="@+id/small_movie_poster"
             app:layout_constraintTop_toTopOf="parent"
             android:textSize="16sp"
             android:textStyle="bold"
@@ -39,13 +39,13 @@
             android:ellipsize="end" />
 
         <TextView
-            android:id="@+id/film_genre_year"
+            android:id="@+id/movie_genre_year"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:layout_marginStart="15dp"
-            app:layout_constraintStart_toEndOf="@+id/film_poster_small"
-            app:layout_constraintTop_toBottomOf="@+id/film_name"
+            app:layout_constraintStart_toEndOf="@+id/small_movie_poster"
+            app:layout_constraintTop_toBottomOf="@+id/movie_name"
             android:textSize="14sp"
             android:textStyle="bold"
             android:textColor="@color/grey" />
