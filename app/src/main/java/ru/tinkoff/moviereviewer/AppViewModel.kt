@@ -9,25 +9,49 @@ import kotlinx.coroutines.launch
 class AppViewModel: ViewModel() {
 
     private val network = AppNetwork()
-    private val popularMovieAPI = network.getRetrofit().create(PopularMovieAPI::class.java)
+    private val movieAPI = network.getRetrofit().create(MovieAPI::class.java)
+    private var favouriteMovieList: MutableList<MovieList.Movie> = mutableListOf()
 
     fun getPopularMovieList(): MutableLiveData<MovieList> {
-        val liveDataFilmList: MutableLiveData<MovieList> = MutableLiveData()
+        val liveDataMovieList: MutableLiveData<MovieList> = MutableLiveData()
 
         CoroutineScope(Dispatchers.Main).launch {
-            liveDataFilmList.value = popularMovieAPI.getPopularMovieList()
+            liveDataMovieList.value = movieAPI.getPopularMovieList()
         }
 
-        return liveDataFilmList
+        return liveDataMovieList
     }
 
     fun getMovieDescriptionById(kinopoiskId: Int): MutableLiveData<MovieById> {
-        val liveDataFilmById: MutableLiveData<MovieById> = MutableLiveData()
+        val liveDataMovieById: MutableLiveData<MovieById> = MutableLiveData()
 
         CoroutineScope(Dispatchers.Main).launch {
-            liveDataFilmById.value = popularMovieAPI.getMovieById(kinopoiskId)
+            liveDataMovieById.value = movieAPI.getMovieById(kinopoiskId)
         }
 
-        return liveDataFilmById
+        return liveDataMovieById
+    }
+
+    fun getFavouriteMovieList(): MutableLiveData<MutableList<MovieList.Movie>> {
+        val liveDataMovieList: MutableLiveData<MutableList<MovieList.Movie>> = MutableLiveData()
+
+        CoroutineScope(Dispatchers.Main).launch {
+            liveDataMovieList.value = favouriteMovieList
+        }
+
+        return liveDataMovieList
+    }
+
+    fun addMovieToFavourites(movie: MovieList.Movie) { favouriteMovieList.add(movie) }
+
+    fun removeMovieFromFavourites(kinopoiskId: Int) {
+        var movieIndex = 0
+
+        for (index in 0 until favouriteMovieList.size) {
+            if (favouriteMovieList[index].kinopoiskId == kinopoiskId)
+                movieIndex = index
+        }
+
+        favouriteMovieList.removeAt(movieIndex)
     }
 }

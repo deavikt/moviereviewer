@@ -23,14 +23,14 @@ class MainActivity : AppCompatActivity() {
         }
 
         if (savedInstanceState == null)
-            addPopularMovieListFragment()
+            addViewPagerFragment()
     }
 
-    // добавление фрагмента со списком популярных фильмов в контейнер
-    private fun addPopularMovieListFragment() {
+    // добавление слайдера фрагментов в контейнер
+    private fun addViewPagerFragment() {
         supportFragmentManager
             .beginTransaction()
-            .add(R.id.fragment_container, PopularMovieListFragment())
+            .add(R.id.fragment_container, ViewPagerFragment())
             .commit()
     }
 }

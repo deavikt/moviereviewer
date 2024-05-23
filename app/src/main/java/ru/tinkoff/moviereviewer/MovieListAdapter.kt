@@ -1,7 +1,9 @@
 package ru.tinkoff.moviereviewer
 
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import androidx.fragment.app.FragmentActivity
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
@@ -10,8 +12,10 @@ import com.bumptech.glide.request.RequestOptions
 import ru.tinkoff.moviereviewer.databinding.MovieItemBinding
 import java.util.Locale
 
-class PopularMovieListAdapter(private val movieList: MovieList):
-    RecyclerView.Adapter<PopularMovieListAdapter.ViewHolder>() {
+class MovieListAdapter(private val tabName: String,
+                       private val movieList: List<MovieList.Movie>,
+                       private val appViewModel: AppViewModel):
+    RecyclerView.Adapter<MovieListAdapter.ViewHolder>() {
 
     class ViewHolder(val binding: MovieItemBinding): RecyclerView.ViewHolder(binding.root)
 
@@ -20,16 +24,28 @@ class PopularMovieListAdapter(private val movieList: MovieList):
         return ViewHolder(binding)
     }
 
-    override fun getItemCount(): Int = movieList.items.size
+    override fun getItemCount(): Int = movieList.size
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val popularMovie = movieList.items[position]
+        val movie = movieList[position]
 
-        holder.binding.movieName.text = popularMovie.nameRu
-        holder.binding.movieGenreYear.text = getGenreYearLine(popularMovie)
-        loadMoviePoster(holder, popularMovie)
+        holder.binding.movieName.text = movie.nameRu
+        holder.binding.movieGenreYear.text = getGenreYearLine(movie)
+        loadMoviePoster(holder, movie)
+
+        if (tabName == "Избранное")
+            holder.binding.favouriteMovieIcon.visibility = View.VISIBLE
 
         holder.itemView.setOnClickListener { addMovieDescriptionFragment(holder, position) }
+
+        holder.itemView.setOnLongClickListener {
+            if (holder.binding.favouriteMovieIcon.visibility == View.INVISIBLE)
+                addMovieToFavourites(holder.binding.favouriteMovieIcon, movie)
+            else
+                removeMovieFromFavourites(holder.binding.favouriteMovieIcon, movie.kinopoiskId)
+
+            true
+        }
     }
 
     // создание строки с жанром и годом выпуска фильма
@@ -58,12 +74,22 @@ class PopularMovieListAdapter(private val movieList: MovieList):
     // замена фрагмента со списком популярных фильмов
     // на фрагмент с описанием выбранного фильма
     private fun addMovieDescriptionFragment(holder: ViewHolder, position: Int) {
-        val popularMovie = movieList.items[position]
+        val movie = movieList[position]
 
         (holder.itemView.context as FragmentActivity).supportFragmentManager
             .beginTransaction()
-            .replace(R.id.fragment_container, MovieDescriptionFragment(popularMovie.kinopoiskId))
+            .replace(R.id.fragment_container, MovieDescriptionFragment(movie.kinopoiskId))
             .addToBackStack("MovieDescriptionFragment")
             .commit()
+    }
+
+    private fun addMovieToFavourites(icon: ImageView, movie: MovieList.Movie) {
+        icon.visibility = View.VISIBLE
+        appViewModel.addMovieToFavourites(movie)
+    }
+
+    private fun removeMovieFromFavourites(icon: ImageView, kinopoiskId: Int) {
+        icon.visibility = View.INVISIBLE
+        appViewModel.removeMovieFromFavourites(kinopoiskId)
     }
 }
