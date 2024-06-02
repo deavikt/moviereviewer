@@ -8,11 +8,20 @@
     android:orientation="vertical"
     tools:context=".ViewPagerFragment">
 
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/tool_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toTopOf="parent"
+        app:menu="@menu/menu"
+        app:collapseIcon="@drawable/back_arrow_icon"
+        app:titleTextAppearance="@style/Toolbar.TextAppearance" />
+
     <androidx.viewpager2.widget.ViewPager2
         android:id="@+id/view_pager"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1" />
+        android:layout_weight="1"/>
     
     <com.google.android.material.tabs.TabLayout
         android:id="@+id/tab_layout"
@@ -20,6 +29,7 @@
         android:layout_height="45dp"
         android:layout_marginStart="15dp"
         android:layout_marginEnd="15dp"
+        android:layout_marginTop="10dp"
         android:layout_marginBottom="10dp"
         android:background="@color/transparent"
         app:tabBackground="@drawable/tab_background"
@@ -29,5 +39,23 @@
         app:tabIndicatorGravity="stretch"
         app:tabTextColor="@color/blue"
         app:tabSelectedTextColor="@color/white" />
+
+    <!--
+    <TextView
+        android:id="@+id/failed_search_result_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:paddingTop="11dp"
+        android:paddingBottom="11dp"
+        android:paddingStart="19dp"
+        android:paddingEnd="19dp"
+        android:text="@string/failed_search_result_title"
+        android:textColor="@color/white"
+        android:visibility="invisible"
+        android:background="@drawable/failed_search_result_text_background"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent" />
+        -->
 
 </LinearLayout>

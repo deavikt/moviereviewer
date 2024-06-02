@@ -23,22 +23,20 @@ class MovieDescriptionFragment(private val kinopoiskId: Int) : Fragment() {
     ): View {
         binding = FragmentMovieDescriptionBinding.inflate(inflater)
 
+        getMovieDescriptionById()
+
         // отображение фрагмента со списком популярных фильмов при нажатии на кнопку "назад"
-        binding.backArrow.setOnClickListener {
+        binding.backArrowIcon.setOnClickListener {
             (requireContext() as FragmentActivity).supportFragmentManager.popBackStack()
         }
 
-        appViewModel.getMovieDescriptionById(kinopoiskId).observe(requireActivity()) {
-            lifecycleScope.launch {
-                binding.movieName2.text = it.nameRu
-                binding.movieDescription.text = it.description
-                binding.movieGenres.text = getGenresLine(it.genres)
-                binding.movieCountries.text = getCountriesLine(it.countries)
-                loadFilmPoster(it.posterUrl)
-            }
-        }
-
         return binding.root
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        getMovieDescriptionById()
     }
 
     // создание строки с написанием жанров фильма через запятую
@@ -76,5 +74,21 @@ class MovieDescriptionFragment(private val kinopoiskId: Int) : Fragment() {
             .placeholder(R.drawable.movie_poster_placeholder)
             .error(R.drawable.movie_poster_error)
             .into(binding.largeMoviePoster)
+    }
+
+    private fun getMovieDescriptionById() {
+        appViewModel.getMovieDescriptionById(
+            kinopoiskId,
+            binding.movieDescriptionView,
+            binding.failedInternetConnectionView
+        ).observe(requireActivity()) {
+            lifecycleScope.launch {
+                binding.movieName2.text = it.nameRu
+                binding.movieDescription.text = it.description
+                binding.movieGenres.text = getGenresLine(it.genres)
+                binding.movieCountries.text = getCountriesLine(it.countries)
+                loadFilmPoster(it.posterUrl)
+            }
+        }
     }
 }

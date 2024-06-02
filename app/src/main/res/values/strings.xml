@@ -4,5 +4,12 @@
     <string name="movie_poster_description">movie poster</string>
     <string name="favourite_movie_icon_description">favourite movie icon</string>
     <string name="back_arrow_icon_description">back arrow icon</string>
+    <string name="failed_internet_connection_icon_description">failed internet connection icon</string>
 
+    <string name="failed_internet_connection_text">Произошла ошибка при загрузке данных, проверьте подключение к сети</string>
+    <string name="repeat_connection_button_title">Повторить</string>
+    <string name="query_hint_title">Поиск</string>
+    <string name="failed_search_result_title">Не найдено</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
 </resources>
