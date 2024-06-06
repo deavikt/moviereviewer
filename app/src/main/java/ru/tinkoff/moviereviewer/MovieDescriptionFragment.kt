@@ -8,11 +8,12 @@ import android.view.ViewGroup
 import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
-import com.bumptech.glide.Glide
+import coil.load
 import kotlinx.coroutines.launch
 import ru.tinkoff.moviereviewer.databinding.FragmentMovieDescriptionBinding
 
-class MovieDescriptionFragment(private val kinopoiskId: Int) : Fragment() {
+class MovieDescriptionFragment(private val tabName: String,
+                               private val id: Int) : Fragment() {
 
     private lateinit var binding: FragmentMovieDescriptionBinding
     private val appViewModel: AppViewModel by activityViewModels()
@@ -23,7 +24,10 @@ class MovieDescriptionFragment(private val kinopoiskId: Int) : Fragment() {
     ): View {
         binding = FragmentMovieDescriptionBinding.inflate(inflater)
 
-        getMovieDescriptionById()
+        if (tabName == "Популярные")
+            getMovieById()
+        else
+            getMovieByIdFromDb()
 
         // отображение фрагмента со списком популярных фильмов при нажатии на кнопку "назад"
         binding.backArrowIcon.setOnClickListener {
@@ -36,58 +40,87 @@ class MovieDescriptionFragment(private val kinopoiskId: Int) : Fragment() {
     override fun onResume() {
         super.onResume()
 
-        getMovieDescriptionById()
+        if (tabName == "Популярные")
+            getMovieById()
+        else
+            getMovieByIdFromDb()
     }
 
     // создание строки с написанием жанров фильма через запятую
-    private fun getGenresLine(genreList: List<MovieById.Genre>): String {
+    @SuppressWarnings("unchecked")
+    private fun <T> getGenresLine(genreList: List<T>): String {
         var genres = "Жанры: "
 
         for (index in genreList.indices) {
+            val genre = if (tabName == "Популярные") {
+                (genreList as List<Genre>)[index].genre
+            } else
+                (genreList as List<String>)[index]
+
             genres += if (index == genreList.size - 1)
-                genreList[index].genre
+                genre
             else
-                genreList[index].genre + ", "
+                "$genre, "
         }
+
         return genres
     }
 
     // создание строки с написанием стран через запятую
-    private fun getCountriesLine(countryList: List<MovieById.Country>): String {
+    private fun <T> getCountriesLine(countryList: List<T>): String {
         var countries = "Страны: "
 
         for (index in countryList.indices) {
+            val country = if (tabName == "Популярные") {
+                (countryList as List<Country>)[index].country
+            } else
+                (countryList as List<String>)[index]
+
             countries += if (index == countryList.size - 1)
-                countryList[index].country
+                country
             else
-                countryList[index].country + ", "
+                "$country, "
         }
 
         return countries
     }
 
     // загрузка постера фильма
-    private fun loadFilmPoster(posterUrl: String) {
-        Glide
-            .with(requireContext())
-            .load(posterUrl)
-            .placeholder(R.drawable.movie_poster_placeholder)
-            .error(R.drawable.movie_poster_error)
-            .into(binding.largeMoviePoster)
+    private fun <T> loadMoviePoster(poster: T) {
+        binding.largeMoviePoster.load(poster) {
+            placeholder(R.drawable.movie_poster_placeholder)
+            error(R.drawable.movie_poster_error)
+        }
     }
 
-    private fun getMovieDescriptionById() {
-        appViewModel.getMovieDescriptionById(
-            kinopoiskId,
-            binding.movieDescriptionView,
-            binding.failedInternetConnectionView
-        ).observe(requireActivity()) {
-            lifecycleScope.launch {
-                binding.movieName2.text = it.nameRu
-                binding.movieDescription.text = it.description
-                binding.movieGenres.text = getGenresLine(it.genres)
-                binding.movieCountries.text = getCountriesLine(it.countries)
-                loadFilmPoster(it.posterUrl)
+    private fun getMovieById() {
+        binding.apply {
+            appViewModel.getMovieById(
+                id,
+                movieDescriptionView,
+                failedInternetConnectionView
+            ).observe(requireActivity()) {
+                lifecycleScope.launch {
+                    movieName.text = it.nameRu
+                    movieDescription.text = it.description
+                    movieGenres.text = getGenresLine(it.genres)
+                    movieCountries.text = getCountriesLine(it.countries)
+                    loadMoviePoster(it.posterUrl)
+                }
+            }
+        }
+    }
+
+    private fun getMovieByIdFromDb() {
+        binding.apply {
+            appViewModel.getMovieByIdFromDb(id).observe(requireActivity()) {
+                lifecycleScope.launch {
+                    movieName.text = it.name
+                    movieDescription.text = it.description
+                    movieGenres.text = getGenresLine(it.genres)
+                    movieCountries.text = getCountriesLine(it.countries)
+                    loadMoviePoster(it.largePoster)
+                }
             }
         }
     }

@@ -16,7 +16,6 @@ class MovieListFragment(private val tabName: String): Fragment() {
 
     private lateinit var binding: FragmentMovieListBinding
     private val appViewModel: AppViewModel by activityViewModels()
-    private var movieList: List<MovieList.Movie> = listOf()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -48,10 +47,11 @@ class MovieListFragment(private val tabName: String): Fragment() {
     }
 
     private fun getPopularMovieList() {
-        appViewModel.getPopularMovieList(binding.movieList, binding.failedInternetConnectionView).observe(requireActivity()) {
-            lifecycleScope.launch {
-                binding.movieList.adapter = MovieListAdapter(tabName, it, appViewModel)
-                movieList = it
+        binding.apply {
+            appViewModel.getPopularMovieList(movieList, failedInternetConnectionView).observe(requireActivity()) {
+                lifecycleScope.launch{
+                    movieList.adapter = MovieListAdapter(tabName, it, appViewModel)
+                }
             }
         }
     }
@@ -60,7 +60,6 @@ class MovieListFragment(private val tabName: String): Fragment() {
         appViewModel.getFavouriteMovieList().observe(requireActivity()) {
             lifecycleScope.launch {
                 binding.movieList.adapter = MovieListAdapter(tabName, it, appViewModel)
-                movieList = it
             }
         }
     }

@@ -26,13 +26,7 @@ class ViewPagerFragment : Fragment() {
     ): View {
         binding = FragmentViewPagerBinding.inflate(inflater)
 
-        (requireActivity() as MenuHost).addMenuProvider(object: MenuProvider {
-            override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
-                menuInflater.inflate(R.menu.menu, menu)
-            }
-
-            override fun onMenuItemSelected(menuItem: MenuItem): Boolean { return false }
-        })
+        addToolBar()
 
         binding.toolBar.title = tabNameList[0]
 
@@ -53,6 +47,16 @@ class ViewPagerFragment : Fragment() {
         })
 
         return binding.root
+    }
+
+    private fun addToolBar() {
+        (requireActivity() as MenuHost).addMenuProvider(object: MenuProvider {
+            override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
+                menuInflater.inflate(R.menu.menu, menu)
+            }
+
+            override fun onMenuItemSelected(menuItem: MenuItem): Boolean { return false }
+        })
     }
 
     private inner class ViewPagerAdapter(fragment: Fragment): FragmentStateAdapter(fragment) {

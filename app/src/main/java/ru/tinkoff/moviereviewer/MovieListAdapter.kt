@@ -1,20 +1,27 @@
 package ru.tinkoff.moviereviewer
 
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.drawable.BitmapDrawable
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.Glide
-import com.bumptech.glide.load.resource.bitmap.RoundedCorners
-import com.bumptech.glide.request.RequestOptions
+import coil.ImageLoader
+import coil.load
+import coil.request.ImageRequest
+import coil.request.SuccessResult
+import coil.transform.RoundedCornersTransformation
+import kotlinx.coroutines.launch
 import ru.tinkoff.moviereviewer.databinding.MovieItemBinding
 import java.util.Locale
 
-class MovieListAdapter(private val tabName: String,
-                       private val movieList: List<MovieList.Movie>,
-                       private val appViewModel: AppViewModel):
+class MovieListAdapter<T>(private val tabName: String,
+                          private val movieList: List<T>,
+                          private val appViewModel: AppViewModel):
     RecyclerView.Adapter<MovieListAdapter.ViewHolder>() {
 
     class ViewHolder(val binding: MovieItemBinding): RecyclerView.ViewHolder(binding.root)
@@ -27,30 +34,57 @@ class MovieListAdapter(private val tabName: String,
     override fun getItemCount(): Int = movieList.size
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val movie = movieList[position]
 
-        holder.binding.movieName.text = movie.nameRu
-        holder.binding.movieGenreYear.text = getGenreYearLine(movie)
-        loadMoviePoster(holder, movie)
+        holder.binding.apply {
+            if (tabName == "Популярные") {
+                movieName.text = (movieList[position] as MovieList.Movie).nameRu
+                movieGenreYear.text = getGenreYearLine(movieList[position] as MovieList.Movie)
+                loadMoviePoster(smallMoviePoster, (movieList[position] as MovieList.Movie).posterUrlPreview)
+            }
+            else {
+                movieName.text = (movieList[position] as Movie).name
+                movieGenreYear.text = getGenreYearLine(movieList[position] as Movie)
+                favouriteMovieIcon.visibility = View.VISIBLE
+                loadMoviePoster(smallMoviePoster, (movieList[position] as Movie).smallPoster)
+            }
+        }
 
-        if (tabName == "Избранное")
-            holder.binding.favouriteMovieIcon.visibility = View.VISIBLE
+        val movieId = if (tabName == "Популярные")
+            (movieList[position] as MovieList.Movie).kinopoiskId
+        else
+            (movieList[position] as Movie).id
 
-        holder.itemView.setOnClickListener { addMovieDescriptionFragment(holder, position) }
+        holder.itemView.apply {
+            setOnClickListener {
+                addMovieDescriptionFragment(context, movieId)
+            }
 
-        holder.itemView.setOnLongClickListener {
-            if (holder.binding.favouriteMovieIcon.visibility == View.INVISIBLE)
-                addMovieToFavourites(holder.binding.favouriteMovieIcon, movie)
-            else
-                removeMovieFromFavourites(holder.binding.favouriteMovieIcon, movie.kinopoiskId)
+            setOnLongClickListener {
+                holder.binding.apply {
+                    if (favouriteMovieIcon.visibility == View.INVISIBLE) {
+                        addMovieToFavourites(
+                            favouriteMovieIcon,
+                            movieList[position] as MovieList.Movie,
+                            context
+                        )
+                    }
+                    else
+                        deleteMovieFromFavourites(favouriteMovieIcon, movieId)
+                }
 
-            true
+                true
+            }
         }
     }
 
     // создание строки с жанром и годом выпуска фильма
-    private fun getGenreYearLine(popularFilm: MovieList.Movie): String {
-        var genreYear = "${popularFilm.genres[0].genre} (${popularFilm.year})"
+    private fun <T> getGenreYearLine(movie: T): String {
+
+        var genreYear = if (tabName == "Популярные")
+            "${(movie as MovieList.Movie).genres[0].genre} (${(movie as MovieList.Movie).year})"
+        else
+            "${(movie as Movie).genres[0]} (${(movie as Movie).year})"
+
 
         // Замена первой буквы в жанре фильма на заглавную
         genreYear = genreYear.replaceFirstChar {
@@ -61,35 +95,64 @@ class MovieListAdapter(private val tabName: String,
     }
 
     // загрузка постера фильма
-    private fun loadMoviePoster(holder: ViewHolder, popularFilm: MovieList.Movie) {
-        Glide
-            .with(holder.itemView.context)
-            .load(popularFilm.posterUrl)
-            .placeholder(R.drawable.movie_poster_placeholder)
-            .error(R.drawable.movie_poster_error)
-            .apply(RequestOptions.bitmapTransform(RoundedCorners(5))) // закругление краев постера
-            .into(holder.binding.smallMoviePoster)
+    private fun <T> loadMoviePoster(moviePosterView: ImageView, poster: T) {
+        moviePosterView.load(poster) {
+            transformations(RoundedCornersTransformation(5f))
+            placeholder(R.drawable.movie_poster_placeholder)
+            error(R.drawable.movie_poster_error)
+        }
+    }
+
+    private suspend fun getBitmapMoviePoster(context: Context, posterUrl: String): Bitmap {
+        val imageRequest = ImageRequest.Builder(context).data(posterUrl).build()
+        val drawable = (ImageLoader(context).execute(imageRequest) as SuccessResult).drawable
+        return (drawable as BitmapDrawable).bitmap
     }
 
     // замена фрагмента со списком популярных фильмов
     // на фрагмент с описанием выбранного фильма
-    private fun addMovieDescriptionFragment(holder: ViewHolder, position: Int) {
-        val movie = movieList[position]
-
-        (holder.itemView.context as FragmentActivity).supportFragmentManager
+    private fun addMovieDescriptionFragment(context: Context, id: Int) {
+        (context as FragmentActivity).supportFragmentManager
             .beginTransaction()
-            .replace(R.id.fragment_container, MovieDescriptionFragment(movie.kinopoiskId))
+            .replace(R.id.fragment_container, MovieDescriptionFragment(tabName, id))
             .addToBackStack("MovieDescriptionFragment")
             .commit()
     }
 
-    private fun addMovieToFavourites(icon: ImageView, movie: MovieList.Movie) {
+    private fun addMovieToFavourites(icon: ImageView,
+                                     movie: MovieList.Movie,
+                                     context: Context) {
         icon.visibility = View.VISIBLE
-        appViewModel.addMovieToFavourites(movie)
+
+        appViewModel.getMovieDescription(movie.kinopoiskId).observe(context as FragmentActivity) {
+            context.lifecycleScope.launch {
+                val countryList: MutableList<String> = mutableListOf()
+                val genreList: MutableList<String> = mutableListOf()
+
+                for (country in movie.countries)
+                    countryList.add(country.country)
+
+                for (genre in movie.genres)
+                    genreList.add(genre.genre)
+
+                val favouriteMovie = Movie(
+                    movie.kinopoiskId,
+                    movie.nameRu,
+                    countryList,
+                    genreList,
+                    movie.year,
+                    it,
+                    getBitmapMoviePoster(context, movie.posterUrlPreview),
+                    getBitmapMoviePoster(context, movie.posterUrl)
+                )
+
+                appViewModel.addMovieToFavourites(favouriteMovie)
+            }
+        }
     }
 
-    private fun removeMovieFromFavourites(icon: ImageView, kinopoiskId: Int) {
+    private fun deleteMovieFromFavourites(icon: ImageView, kinopoiskId: Int) {
         icon.visibility = View.INVISIBLE
-        appViewModel.removeMovieFromFavourites(kinopoiskId)
+        appViewModel.deleteMovieFromFavourites(kinopoiskId)
     }
 }

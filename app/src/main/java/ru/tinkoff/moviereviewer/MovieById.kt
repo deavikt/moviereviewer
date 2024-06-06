@@ -6,12 +6,4 @@ data class MovieById(
     val posterUrl: String,
     val genres: List<Genre>,
     val countries: List<Country>
-) {
-    data class Genre(
-        val genre: String
-    )
-
-    data class Country(
-        val country: String
-    )
-}
+)

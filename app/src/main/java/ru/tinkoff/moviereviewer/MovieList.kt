@@ -11,13 +11,5 @@ data class MovieList(
         val year: String,
         val posterUrl: String,
         val posterUrlPreview: String
-    ) {
-        data class Country(
-            val country: String
-        )
-
-        data class Genre(
-            val genre: String
-        )
-    }
+    )
 }
