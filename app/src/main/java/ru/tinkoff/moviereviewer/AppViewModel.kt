@@ -101,7 +101,7 @@ class AppViewModel: ViewModel() {
                 if (response.body() != null) {
                     liveDataMovieDescription.value = response.body()!!.description
 
-                    Log.d("response", response.body()!!.description)
+                    Log.d("response", liveDataMovieDescription.value!!)
                 }
             }
 

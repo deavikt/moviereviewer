@@ -8,6 +8,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 import coil.ImageLoader
@@ -35,28 +36,18 @@ class MovieListAdapter<T>(private val tabName: String,
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
 
-        holder.binding.apply {
-            if (tabName == "Популярные") {
-                movieName.text = (movieList[position] as MovieList.Movie).nameRu
-                movieGenreYear.text = getGenreYearLine(movieList[position] as MovieList.Movie)
-                loadMoviePoster(smallMoviePoster, (movieList[position] as MovieList.Movie).posterUrlPreview)
-            }
-            else {
-                movieName.text = (movieList[position] as Movie).name
-                movieGenreYear.text = getGenreYearLine(movieList[position] as Movie)
-                favouriteMovieIcon.visibility = View.VISIBLE
-                loadMoviePoster(smallMoviePoster, (movieList[position] as Movie).smallPoster)
-            }
-        }
+        val lifecycleOwner = holder.itemView.context as FragmentActivity
 
-        val movieId = if (tabName == "Популярные")
-            (movieList[position] as MovieList.Movie).kinopoiskId
-        else
-            (movieList[position] as Movie).id
+        holder.binding.apply {
+            movieName.text = getMovieName(position)
+            movieGenreYear.text = getGenreYearLine(position)
+            loadMoviePoster(smallMoviePoster, getMoviePosterType(position))
+            setUpFavouriteMovieIcon(getMovieId(position), lifecycleOwner, favouriteMovieIcon)
+        }
 
         holder.itemView.apply {
             setOnClickListener {
-                addMovieDescriptionFragment(context, movieId)
+                addMovieDescriptionFragment(context, getMovieId(position))
             }
 
             setOnLongClickListener {
@@ -69,7 +60,7 @@ class MovieListAdapter<T>(private val tabName: String,
                         )
                     }
                     else
-                        deleteMovieFromFavourites(favouriteMovieIcon, movieId)
+                        deleteMovieFromFavourites(favouriteMovieIcon, getMovieId(position))
                 }
 
                 true
@@ -77,13 +68,31 @@ class MovieListAdapter<T>(private val tabName: String,
         }
     }
 
+    private fun getMovieId(position: Int): Int {
+        val movieId = if (tabName == "Популярные")
+            (movieList[position] as MovieList.Movie).kinopoiskId
+        else
+            (movieList[position] as Movie).id
+
+        return movieId
+    }
+
+    private fun getMovieName(position: Int): String {
+        val movieName = if (tabName == "Популярные")
+            (movieList[position] as MovieList.Movie).nameRu
+        else
+            (movieList[position] as Movie).name
+
+        return movieName
+    }
+
     // создание строки с жанром и годом выпуска фильма
-    private fun <T> getGenreYearLine(movie: T): String {
+    private fun getGenreYearLine(position: Int): String {
 
         var genreYear = if (tabName == "Популярные")
-            "${(movie as MovieList.Movie).genres[0].genre} (${(movie as MovieList.Movie).year})"
+            "${(movieList[position] as MovieList.Movie).genres[0].genre} (${(movieList[position] as MovieList.Movie).year})"
         else
-            "${(movie as Movie).genres[0]} (${(movie as Movie).year})"
+            "${(movieList[position] as Movie).genres[0]} (${(movieList[position] as Movie).year})"
 
 
         // Замена первой буквы в жанре фильма на заглавную
@@ -103,10 +112,26 @@ class MovieListAdapter<T>(private val tabName: String,
         }
     }
 
-    private suspend fun getBitmapMoviePoster(context: Context, posterUrl: String): Bitmap {
-        val imageRequest = ImageRequest.Builder(context).data(posterUrl).build()
-        val drawable = (ImageLoader(context).execute(imageRequest) as SuccessResult).drawable
-        return (drawable as BitmapDrawable).bitmap
+    private fun getMoviePosterType(position: Int): Any {
+        val moviePosterType: Any = if (tabName == "Популярные") {
+            (movieList[position] as MovieList.Movie).posterUrlPreview
+        }
+        else
+            (movieList[position] as Movie).smallPoster
+
+        return moviePosterType
+    }
+
+    private fun setUpFavouriteMovieIcon(movieId: Int,
+                                        lifecycleOwner: LifecycleOwner,
+                                        favouriteMovieIcon: ImageView) {
+        if (tabName == "Популярные")
+            appViewModel.getMovieByIdFromDb(movieId).observe(lifecycleOwner) {
+                if (it != null)
+                    favouriteMovieIcon.visibility = View.VISIBLE
+            }
+        else
+            favouriteMovieIcon.visibility = View.VISIBLE
     }
 
     // замена фрагмента со списком популярных фильмов
@@ -149,6 +174,12 @@ class MovieListAdapter<T>(private val tabName: String,
                 appViewModel.addMovieToFavourites(favouriteMovie)
             }
         }
+    }
+
+    private suspend fun getBitmapMoviePoster(context: Context, posterUrl: String): Bitmap {
+        val imageRequest = ImageRequest.Builder(context).data(posterUrl).build()
+        val drawable = (ImageLoader(context).execute(imageRequest) as SuccessResult).drawable
+        return (drawable as BitmapDrawable).bitmap
     }
 
     private fun deleteMovieFromFavourites(icon: ImageView, kinopoiskId: Int) {
