@@ -1,5 +1,6 @@
 package ru.tinkoff.moviereviewer
 
+import android.content.res.Configuration
 import android.os.Bundle
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
@@ -7,13 +8,14 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import coil.load
 import kotlinx.coroutines.launch
 import ru.tinkoff.moviereviewer.databinding.FragmentMovieDescriptionBinding
 
-class MovieDescriptionFragment(private val tabName: String,
-                               private val id: Int) : Fragment() {
+class MovieDescriptionFragment: Fragment() {
 
     private lateinit var binding: FragmentMovieDescriptionBinding
     private val appViewModel: AppViewModel by activityViewModels()
@@ -24,26 +26,22 @@ class MovieDescriptionFragment(private val tabName: String,
     ): View {
         binding = FragmentMovieDescriptionBinding.inflate(inflater)
 
-        if (tabName == "Популярные")
-            getMovieById()
-        else
-            getMovieByIdFromDb()
-
-        // отображение фрагмента со списком популярных фильмов при нажатии на кнопку "назад"
-        binding.backArrowIcon.setOnClickListener {
-            (requireContext() as FragmentActivity).supportFragmentManager.popBackStack()
-        }
+        binding.backArrowIcon.setOnClickListener { removeMovieDescriptionFragment() }
 
         return binding.root
     }
 
-    override fun onResume() {
-        super.onResume()
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
 
-        if (tabName == "Популярные")
+        if (appViewModel.getMovieListType() == "Популярные")
             getMovieById()
         else
-            getMovieByIdFromDb()
+            getMovieByIdFromDb(appViewModel.getSelectedMovieId())
+
+        if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+            removeMovieDescriptionFragment()
+        }
     }
 
     // создание строки с написанием жанров фильма через запятую
@@ -52,7 +50,7 @@ class MovieDescriptionFragment(private val tabName: String,
         var genres = "Жанры: "
 
         for (index in genreList.indices) {
-            val genre = if (tabName == "Популярные") {
+            val genre = if (appViewModel.getMovieListType() == "Популярные") {
                 (genreList as List<Genre>)[index].genre
             } else
                 (genreList as List<String>)[index]
@@ -71,7 +69,7 @@ class MovieDescriptionFragment(private val tabName: String,
         var countries = "Страны: "
 
         for (index in countryList.indices) {
-            val country = if (tabName == "Популярные") {
+            val country = if (appViewModel.getMovieListType() == "Популярные") {
                 (countryList as List<Country>)[index].country
             } else
                 (countryList as List<String>)[index]
@@ -95,33 +93,45 @@ class MovieDescriptionFragment(private val tabName: String,
 
     private fun getMovieById() {
         binding.apply {
-            appViewModel.getMovieById(
-                id,
-                movieDescriptionView,
-                failedInternetConnectionView
-            ).observe(requireActivity()) {
-                lifecycleScope.launch {
-                    movieName.text = it.nameRu
-                    movieDescription.text = it.description
-                    movieGenres.text = getGenresLine(it.genres)
-                    movieCountries.text = getCountriesLine(it.countries)
-                    loadMoviePoster(it.posterUrl)
+            lifecycleScope.launch {
+                repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                    appViewModel.getMovieById(
+                        requireActivity(),
+                        movieDescriptionView,
+                        failedInternetConnectionView
+                    ).observe(requireActivity()) {
+                        movieName.text = it.nameRu
+                        movieDescription.text = it.description
+                        movieGenres.text = getGenresLine(it.genres)
+                        movieCountries.text = getCountriesLine(it.countries)
+                        loadMoviePoster(it.posterUrl)
+                    }
                 }
             }
         }
     }
 
-    private fun getMovieByIdFromDb() {
+    private fun getMovieByIdFromDb(id: Int) {
         binding.apply {
-            appViewModel.getMovieByIdFromDb(id).observe(requireActivity()) {
-                lifecycleScope.launch {
-                    movieName.text = it.name
-                    movieDescription.text = it.description
-                    movieGenres.text = getGenresLine(it.genres)
-                    movieCountries.text = getCountriesLine(it.countries)
-                    loadMoviePoster(it.largePoster)
+            lifecycleScope.launch {
+                repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                    appViewModel.getMovieByIdFromDb(id).observe(requireActivity()) {
+                        movieName.text = it.name
+                        movieDescription.text = it.description
+                        movieGenres.text = getGenresLine(it.genres)
+                        movieCountries.text = getCountriesLine(it.countries)
+                        loadMoviePoster(it.largePoster)
+                    }
                 }
             }
         }
+    }
+
+    // отображение фрагмента со списком популярных фильмов при нажатии на кнопку "назад"
+    private fun removeMovieDescriptionFragment() {
+        (requireContext() as FragmentActivity).supportFragmentManager.popBackStack()
+
+        if (resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT)
+            appViewModel.setSelectedMovieId(0)
     }
 }

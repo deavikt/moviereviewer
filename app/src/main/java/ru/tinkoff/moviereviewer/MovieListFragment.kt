@@ -1,18 +1,21 @@
 package ru.tinkoff.moviereviewer
 
 import android.os.Bundle
+import android.util.Log
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.launch
 import ru.tinkoff.moviereviewer.databinding.FragmentMovieListBinding
 
-class MovieListFragment(private val tabName: String): Fragment() {
+class MovieListFragment: Fragment() {
 
     private lateinit var binding: FragmentMovieListBinding
     private val appViewModel: AppViewModel by activityViewModels()
@@ -29,18 +32,15 @@ class MovieListFragment(private val tabName: String): Fragment() {
             false
         )
 
-        if (tabName == "Популярные")
-            getPopularMovieList()
-        else
-            getFavouriteMovieList()
-
         return binding.root
     }
 
-    override fun onResume() {
-        super.onResume()
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
 
-        if (tabName == "Популярные")
+        Log.d("movie list type", appViewModel.getMovieListType())
+
+        if (appViewModel.getMovieListType() == "Популярные")
             getPopularMovieList()
         else
             getFavouriteMovieList()
@@ -48,18 +48,22 @@ class MovieListFragment(private val tabName: String): Fragment() {
 
     private fun getPopularMovieList() {
         binding.apply {
-            appViewModel.getPopularMovieList(movieList, failedInternetConnectionView).observe(requireActivity()) {
-                lifecycleScope.launch{
-                    movieList.adapter = MovieListAdapter(tabName, it, appViewModel)
+            lifecycleScope.launch {
+                repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                    appViewModel.getPopularMovieList(movieList, failedInternetConnectionView).observe(requireActivity()) {
+                        movieList.adapter = MovieListAdapter(it, appViewModel)
+                    }
                 }
             }
         }
     }
 
     private fun getFavouriteMovieList() {
-        appViewModel.getFavouriteMovieList().observe(requireActivity()) {
-            lifecycleScope.launch {
-                binding.movieList.adapter = MovieListAdapter(tabName, it, appViewModel)
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                appViewModel.getFavouriteMovieList().observe(requireActivity()) {
+                    binding.movieList.adapter = MovieListAdapter(it, appViewModel)
+                }
             }
         }
     }

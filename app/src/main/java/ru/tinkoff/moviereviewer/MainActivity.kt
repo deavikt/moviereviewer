@@ -1,5 +1,6 @@
 package ru.tinkoff.moviereviewer
 
+import android.content.res.Configuration
 import android.os.Bundle
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
@@ -24,6 +25,9 @@ class MainActivity : AppCompatActivity() {
 
         if (savedInstanceState == null)
             addViewPagerFragment()
+
+        if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE)
+            addMovieDescriptionFragment()
     }
 
     // добавление слайдера фрагментов в контейнер
@@ -31,6 +35,15 @@ class MainActivity : AppCompatActivity() {
         supportFragmentManager
             .beginTransaction()
             .add(R.id.fragment_container, ViewPagerFragment())
+            .commit()
+    }
+
+    // добавление фрагмента с описанием выбранного фильма в контейнер
+    private fun addMovieDescriptionFragment() {
+        supportFragmentManager
+            .beginTransaction()
+            .add(
+                R.id.movie_description_fragment_container, MovieDescriptionFragment())
             .commit()
     }
 }

@@ -1,6 +1,7 @@
 package ru.tinkoff.moviereviewer
 
 import android.content.Context
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
 import android.view.LayoutInflater
@@ -20,8 +21,7 @@ import kotlinx.coroutines.launch
 import ru.tinkoff.moviereviewer.databinding.MovieItemBinding
 import java.util.Locale
 
-class MovieListAdapter<T>(private val tabName: String,
-                          private val movieList: List<T>,
+class MovieListAdapter<T>(private val movieList: List<T>,
                           private val appViewModel: AppViewModel):
     RecyclerView.Adapter<MovieListAdapter.ViewHolder>() {
 
@@ -47,7 +47,12 @@ class MovieListAdapter<T>(private val tabName: String,
 
         holder.itemView.apply {
             setOnClickListener {
-                addMovieDescriptionFragment(context, getMovieId(position))
+                appViewModel.setSelectedMovieId(getMovieId(position))
+
+                addMovieDescriptionFragment(
+                    getContainerViewId(resources.configuration.orientation),
+                    context
+                )
             }
 
             setOnLongClickListener {
@@ -60,7 +65,7 @@ class MovieListAdapter<T>(private val tabName: String,
                         )
                     }
                     else
-                        deleteMovieFromFavourites(favouriteMovieIcon, getMovieId(position))
+                        deleteMovieFromFavourites(favouriteMovieIcon, position, getMovieId(position))
                 }
 
                 true
@@ -69,7 +74,7 @@ class MovieListAdapter<T>(private val tabName: String,
     }
 
     private fun getMovieId(position: Int): Int {
-        val movieId = if (tabName == "Популярные")
+        val movieId = if (appViewModel.getMovieListType() == "Популярные")
             (movieList[position] as MovieList.Movie).kinopoiskId
         else
             (movieList[position] as Movie).id
@@ -78,7 +83,7 @@ class MovieListAdapter<T>(private val tabName: String,
     }
 
     private fun getMovieName(position: Int): String {
-        val movieName = if (tabName == "Популярные")
+        val movieName = if (appViewModel.getMovieListType() == "Популярные")
             (movieList[position] as MovieList.Movie).nameRu
         else
             (movieList[position] as Movie).name
@@ -89,7 +94,7 @@ class MovieListAdapter<T>(private val tabName: String,
     // создание строки с жанром и годом выпуска фильма
     private fun getGenreYearLine(position: Int): String {
 
-        var genreYear = if (tabName == "Популярные")
+        var genreYear = if (appViewModel.getMovieListType() == "Популярные")
             "${(movieList[position] as MovieList.Movie).genres[0].genre} (${(movieList[position] as MovieList.Movie).year})"
         else
             "${(movieList[position] as Movie).genres[0]} (${(movieList[position] as Movie).year})"
@@ -113,7 +118,7 @@ class MovieListAdapter<T>(private val tabName: String,
     }
 
     private fun getMoviePosterType(position: Int): Any {
-        val moviePosterType: Any = if (tabName == "Популярные") {
+        val moviePosterType: Any = if (appViewModel.getMovieListType() == "Популярные") {
             (movieList[position] as MovieList.Movie).posterUrlPreview
         }
         else
@@ -125,7 +130,7 @@ class MovieListAdapter<T>(private val tabName: String,
     private fun setUpFavouriteMovieIcon(movieId: Int,
                                         lifecycleOwner: LifecycleOwner,
                                         favouriteMovieIcon: ImageView) {
-        if (tabName == "Популярные")
+        if (appViewModel.getMovieListType() == "Популярные")
             appViewModel.getMovieByIdFromDb(movieId).observe(lifecycleOwner) {
                 if (it != null)
                     favouriteMovieIcon.visibility = View.VISIBLE
@@ -134,12 +139,23 @@ class MovieListAdapter<T>(private val tabName: String,
             favouriteMovieIcon.visibility = View.VISIBLE
     }
 
+    private fun getContainerViewId(orientation: Int): Int {
+        var containerViewId = 0
+
+        when (orientation) {
+            Configuration.ORIENTATION_PORTRAIT -> containerViewId = R.id.fragment_container
+            Configuration.ORIENTATION_LANDSCAPE -> containerViewId = R.id.movie_description_fragment_container
+        }
+
+        return containerViewId
+    }
+
     // замена фрагмента со списком популярных фильмов
     // на фрагмент с описанием выбранного фильма
-    private fun addMovieDescriptionFragment(context: Context, id: Int) {
+    private fun addMovieDescriptionFragment(containerViewId: Int, context: Context) {
         (context as FragmentActivity).supportFragmentManager
             .beginTransaction()
-            .replace(R.id.fragment_container, MovieDescriptionFragment(tabName, id))
+            .replace(containerViewId, MovieDescriptionFragment())
             .addToBackStack("MovieDescriptionFragment")
             .commit()
     }
@@ -151,20 +167,11 @@ class MovieListAdapter<T>(private val tabName: String,
 
         appViewModel.getMovieDescription(movie.kinopoiskId).observe(context as FragmentActivity) {
             context.lifecycleScope.launch {
-                val countryList: MutableList<String> = mutableListOf()
-                val genreList: MutableList<String> = mutableListOf()
-
-                for (country in movie.countries)
-                    countryList.add(country.country)
-
-                for (genre in movie.genres)
-                    genreList.add(genre.genre)
-
                 val favouriteMovie = Movie(
                     movie.kinopoiskId,
                     movie.nameRu,
-                    countryList,
-                    genreList,
+                    getMoviePropertyList("Страны", movie),
+                    getMoviePropertyList("Жанры", movie),
                     movie.year,
                     it,
                     getBitmapMoviePoster(context, movie.posterUrlPreview),
@@ -176,14 +183,28 @@ class MovieListAdapter<T>(private val tabName: String,
         }
     }
 
+    private fun getMoviePropertyList(type: String, movie: MovieList.Movie): List<String> {
+        val propertyList: MutableList<String> = mutableListOf()
+
+        if (type == "Страны")
+            for (property in movie.countries)
+                propertyList.add(property.country)
+        else
+            for (property in movie.genres)
+                propertyList.add(property.genre)
+
+        return propertyList
+    }
+
     private suspend fun getBitmapMoviePoster(context: Context, posterUrl: String): Bitmap {
         val imageRequest = ImageRequest.Builder(context).data(posterUrl).build()
         val drawable = (ImageLoader(context).execute(imageRequest) as SuccessResult).drawable
         return (drawable as BitmapDrawable).bitmap
     }
 
-    private fun deleteMovieFromFavourites(icon: ImageView, kinopoiskId: Int) {
+    private fun deleteMovieFromFavourites(icon: ImageView, position: Int, kinopoiskId: Int) {
         icon.visibility = View.INVISIBLE
+        notifyItemRemoved(position)
         appViewModel.deleteMovieFromFavourites(kinopoiskId)
     }
 }

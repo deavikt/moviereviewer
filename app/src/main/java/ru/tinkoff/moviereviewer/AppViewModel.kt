@@ -4,6 +4,7 @@ import android.util.Log
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -19,17 +20,23 @@ class AppViewModel: ViewModel() {
     private val movieAPI = network.getRetrofit().create(MovieAPI::class.java)
     private val movieDao = MovieReviewerApp.movieDatabase.movieDao()
 
+    private var movieListType = "Популярные"
+    private var selectedMovieId: MutableLiveData<Int> = MutableLiveData()
+
     fun getPopularMovieList(movieListView: RecyclerView,
-                            failedInternetConnectionView: LinearLayout): MutableLiveData<List<MovieList.Movie>> {
+                            failedInternetConnectionView: LinearLayout
+    ): MutableLiveData<List<MovieList.Movie>> {
         val liveDataMovieList: MutableLiveData<List<MovieList.Movie>> = MutableLiveData()
 
         val call: Call<MovieList> = movieAPI.getPopularMovieList()
-        
+
         call.enqueue(object : Callback<MovieList> {
             override fun onResponse(call: Call<MovieList>, response: Response<MovieList>) {
 
                 if (response.body() != null) {
                     liveDataMovieList.value = response.body()!!.items
+
+                    selectedMovieId.value = response.body()!!.items[0].kinopoiskId
 
                     movieListView.visibility = View.VISIBLE
                     failedInternetConnectionView.visibility = View.INVISIBLE
@@ -50,34 +57,36 @@ class AppViewModel: ViewModel() {
         return liveDataMovieList
     }
 
-    fun getMovieById(kinopoiskId: Int,
+    fun getMovieById(lifecycleOwner: LifecycleOwner,
                      movieDescriptionView: ScrollView,
                      failedInternetConnectionView: LinearLayout): MutableLiveData<MovieById> {
         val liveDataMovieById: MutableLiveData<MovieById> = MutableLiveData()
 
-        val call: Call<MovieById> = movieAPI.getMovieById(kinopoiskId)
+        selectedMovieId.observe(lifecycleOwner) {
+            val call: Call<MovieById> = movieAPI.getMovieById(it)
 
-        call.enqueue(object : Callback<MovieById> {
-            override fun onResponse(call: Call<MovieById>, response: Response<MovieById>) {
+            call.enqueue(object : Callback<MovieById> {
+                override fun onResponse(call: Call<MovieById>, response: Response<MovieById>) {
 
-                if (response.body() != null) {
-                    liveDataMovieById.value = response.body()
+                    if (response.body() != null) {
+                        liveDataMovieById.value = response.body()
 
-                    movieDescriptionView.visibility = View.VISIBLE
-                    failedInternetConnectionView.visibility = View.INVISIBLE
+                        movieDescriptionView.visibility = View.VISIBLE
+                        failedInternetConnectionView.visibility = View.INVISIBLE
 
-                    Log.d("response", response.body().toString())
+                        Log.d("response", response.body().toString())
+                    }
                 }
-            }
 
-            override fun onFailure(call: Call<MovieById>, t: Throwable) {
+                override fun onFailure(call: Call<MovieById>, t: Throwable) {
 
-                movieDescriptionView.visibility = View.INVISIBLE
-                failedInternetConnectionView.visibility = View.VISIBLE
+                    movieDescriptionView.visibility = View.INVISIBLE
+                    failedInternetConnectionView.visibility = View.VISIBLE
 
-                Log.d("response", t.message.toString())
-            }
-        })
+                    Log.d("response", t.message.toString())
+                }
+            })
+        }
 
         return liveDataMovieById
     }
@@ -114,13 +123,13 @@ class AppViewModel: ViewModel() {
     }
 
     fun getFavouriteMovieList(): MutableLiveData<List<Movie>> {
-        val liveDataMovieList: MutableLiveData<List<Movie>> = MutableLiveData()
+        val favouriteMovieList: MutableLiveData<List<Movie>> = MutableLiveData()
 
         viewModelScope.launch {
-            liveDataMovieList.value = movieDao.getMovieList()
+            favouriteMovieList.value = movieDao.getMovieList()
         }
 
-        return liveDataMovieList
+        return favouriteMovieList
     }
 
     fun addMovieToFavourites(movie: Movie) {
@@ -130,4 +139,12 @@ class AppViewModel: ViewModel() {
     fun deleteMovieFromFavourites(kinopoiskId: Int) {
         viewModelScope.launch { movieDao.deleteMovieById(kinopoiskId) }
     }
+
+    fun setMovieListType(type: String) { movieListType = type }
+
+    fun getMovieListType() = movieListType
+
+    fun setSelectedMovieId(id: Int) { selectedMovieId.value = id }
+
+    fun getSelectedMovieId(): Int = selectedMovieId.value!!
 }
